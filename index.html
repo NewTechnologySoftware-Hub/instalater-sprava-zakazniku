@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Správa zákazníků</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+
+    <header>
+        <h1>Správa Zákazníků - Instalatér tatínek, NTS Hub</h1>
+    </header>
+
+    <main class="container">
+        
+        <section id="initial-menu" class="card">
+            <button id="show-search-customer" class="main-btn"><i class="fas fa-search"></i> Vyhledat stávajícího zákazníka</button>
+            <button id="show-add-customer" class="main-btn"><i class="fas fa-user-plus"></i> Přidat nového zákazníka</button>
+        </section>
+
+        <section id="add-customer-view" class="form-card hidden">
+            <h2>Přidat nového zákazníka</h2>
+            <p class="info-text">Není nutné vyplnit všechna pole.</p>
+            <form id="customer-form">
+                <input type="text" id="name" placeholder="Jméno a Příjmení">
+                <input type="text" id="address" placeholder="Adresa">
+                <input type="text" id="phone" placeholder="Telefon">
+                <input type="email" id="email" placeholder="E-mail">
+                <input type="text" id="date" placeholder="Datum">
+                <textarea id="note" placeholder="Poznámka"></textarea>
+                <button type="submit">Uložit</button>
+            </form>
+            <div id="alert-message" class="alert"></div>
+            <button id="back-to-menu-add" class="back-btn"><i class="fas fa-arrow-left"></i> Zpět</button>
+        </section>
+
+        <section id="search-customer-view" class="form-card hidden">
+            <h2>Vyhledat zákazníka</h2>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Hledat dle slova...">
+                <button id="search-button"><i class="fas fa-search"></i></button>
+            </div>
+            <button id="show-all-customers" class="full-list-btn">Zobrazit kompletní výpis databáze zákazníků</button>
+            <div id="search-results"></div>
+            <button id="back-to-menu-search" class="back-btn"><i class="fas fa-arrow-left"></i> Zpět</button>
+        </section>
+        
+    </main>
+
+    <!-- Dialog pro potvrzení smazání -->
+    <div id="confirm-dialog" class="dialog-overlay hidden">
+        <div class="dialog-content">
+            <p>Chystáte se nevratně odstranit zákazníka z databáze NTS\instalater-database-zakazniku?</p>
+            <div class="dialog-buttons">
+                <button id="dialog-confirm" class="delete-btn">Ano</button>
+                <button id="dialog-cancel" class="edit-btn">Ne</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Překryvný prvek pro načítání -->
+    <div id="loading-overlay" class="dialog-overlay hidden">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Dotazování databáze... Momentík...</p>
+        </div>
+    </div>
+    
+    <!-- Firebase skripty -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script src="script.js"></script>
+</body>
+</html>
