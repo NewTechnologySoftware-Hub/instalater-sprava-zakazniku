@@ -16,6 +16,7 @@ const customersRef = database.ref('customers');
 // Získání elementů z DOM
 const initialMenu = document.getElementById('initial-menu');
 const addCustomerView = document.getElementById('add-customer-view');
+const addCustomerTitle = document.getElementById('add-customer-view').querySelector('h2');
 const searchCustomerView = document.getElementById('search-customer-view');
 
 const showAddCustomerBtn = document.getElementById('show-add-customer');
@@ -27,6 +28,7 @@ const customerForm = document.getElementById('customer-form');
 const nameInput = document.getElementById('name');
 const addressInput = document.getElementById('address');
 const phoneInput = document.getElementById('phone');
+const phoneStatus = document.getElementById('phone-status');
 const emailInput = document.getElementById('email');
 const dateInput = document.getElementById('date');
 const noteInput = document.getElementById('note');
@@ -40,9 +42,21 @@ const showAllCustomersBtn = document.getElementById('show-all-customers');
 const confirmDialog = document.getElementById('confirm-dialog');
 const dialogConfirmBtn = document.getElementById('dialog-confirm');
 const dialogCancelBtn = document.getElementById('dialog-cancel');
+
+const warningDialog = document.getElementById('warning-dialog');
+const existingCustomersList = document.getElementById('existing-customers-list');
+const ignoreWarningBtn = document.getElementById('ignore-warning-btn');
+
 const loadingOverlay = document.getElementById('loading-overlay');
 
 let currentCustomerId = null; // Proměnná pro uložení ID upravovaného zákazníka
+let isIgnoringWarning = false; // Příznak pro ignorování duplicitního čísla
+
+// Pomocná funkce pro normalizaci telefonního čísla (odstraní mezery)
+const normalizePhoneNumber = (phoneNumber) => {
+    if (!phoneNumber) return '';
+    return phoneNumber.replace(/\s/g, '');
+};
 
 // Funkce pro přepínání mezi pohledy
 const showView = (view) => {
@@ -66,6 +80,11 @@ const deleteCustomer = (customerId) => {
     customersRef.child(customerId).remove()
         .then(() => {
             showAlert('Zákazník byl úspěšně smazán!', 'success');
+            // Logika po smazání z varovného dialogu
+            if (!warningDialog.classList.contains('hidden')) {
+                warningDialog.classList.add('hidden');
+                setPhoneStatus('Nový zákazník...', 'ok');
+            }
             performSearch();
             confirmDialog.classList.add('hidden');
         })
@@ -76,7 +95,7 @@ const deleteCustomer = (customerId) => {
 };
 
 // Funkce pro vytvoření karty zákazníka a přidání do DOM
-const createCustomerCard = (key, customer) => {
+const createCustomerCard = (key, customer, container) => {
     const customerCard = document.createElement('div');
     customerCard.className = 'customer-card';
     customerCard.innerHTML = `
@@ -91,7 +110,7 @@ const createCustomerCard = (key, customer) => {
             <button class="delete-btn" data-id="${key}"><i class="fas fa-trash-alt"></i> Smazat</button>
         </div>
     `;
-    searchResults.appendChild(customerCard);
+    container.appendChild(customerCard);
 };
 
 // Funkce pro přidání posluchačů na tlačítka Smazat a Upravit
@@ -100,6 +119,9 @@ const addActionListeners = () => {
         button.addEventListener('click', (e) => {
             currentCustomerId = e.target.dataset.id;
             confirmDialog.classList.remove('hidden');
+            // Zajistíme, že potvrzovací dialog je na popředí
+            confirmDialog.style.zIndex = '1001';
+            warningDialog.style.zIndex = '1000';
         });
     });
     document.querySelectorAll('.edit-btn').forEach(button => {
@@ -115,15 +137,19 @@ const addActionListeners = () => {
                 noteInput.value = customerData.note || '';
                 currentCustomerId = customerId;
                 customerForm.querySelector('button[type="submit"]').textContent = 'Uložit úpravy';
+                // Změna nadpisu
+                addCustomerTitle.textContent = 'Úprava existujícího zákazníka';
+                // Zavřít varovný dialog, pokud je otevřen
+                warningDialog.classList.add('hidden');
                 showView(addCustomerView);
             });
         });
     });
 };
 
-// Funkce pro vyhledávání zákazníků
+// Funkce pro vyhledávání zákazníků (s normalizací)
 const performSearch = () => {
-    const searchTerm = searchInput.value.toLowerCase();
+    const searchTerm = normalizePhoneNumber(searchInput.value.toLowerCase());
     searchResults.innerHTML = '';
 
     customersRef.once('value', (snapshot) => {
@@ -132,10 +158,14 @@ const performSearch = () => {
 
         if (customers) {
             Object.entries(customers).forEach(([key, customer]) => {
-                if (Object.values(customer).some(value =>
-                    (value && typeof value === 'string' && value.toLowerCase().includes(searchTerm))
-                )) {
-                    createCustomerCard(key, customer);
+                const normalizedCustomerPhone = normalizePhoneNumber(customer.phone);
+                // Kontrola, zda se hledaný výraz nachází v jakékoliv hodnotě záznamu nebo v normalizovaném tel. čísle
+                const matches = Object.values(customer).some(value =>
+                    (value && typeof value === 'string' && value.toLowerCase().includes(searchInput.value.toLowerCase()))
+                ) || normalizedCustomerPhone.includes(searchTerm);
+
+                if (matches) {
+                    createCustomerCard(key, customer, searchResults);
                     found = true;
                 }
             });
@@ -178,13 +208,71 @@ const showAllCustomers = () => {
 const displayAllCustomers = (customers) => {
     if (customers) {
         Object.entries(customers).forEach(([key, customer]) => {
-            createCustomerCard(key, customer);
+            createCustomerCard(key, customer, searchResults);
         });
         addActionListeners();
     } else {
         searchResults.innerHTML = '<p style="text-align: center; color: #dc3545;">Databáze je prázdná.</p>';
     }
 };
+
+// Funkce pro zobrazení statusu pod telefonním číslem
+const setPhoneStatus = (message, type) => {
+    phoneStatus.innerHTML = `<i class="fas fa-${type === 'ok' ? 'check' : 'times'}"></i> ${message}`;
+    phoneStatus.className = `phone-status-text ${type}`;
+};
+
+// Kontrola duplicitního telefonního čísla při opuštění pole
+phoneInput.addEventListener('blur', () => {
+    phoneStatus.innerHTML = '';
+    const phoneNumber = normalizePhoneNumber(phoneInput.value.trim());
+
+    if (phoneNumber === '') {
+        return;
+    }
+
+    customersRef.once('value', (snapshot) => {
+        const customers = snapshot.val();
+        const existingCustomers = [];
+
+        if (customers) {
+            Object.entries(customers).forEach(([key, customer]) => {
+                const normalizedCustomerPhone = normalizePhoneNumber(customer.phone);
+                if (normalizedCustomerPhone === phoneNumber) {
+                    existingCustomers.push({ key, ...customer });
+                }
+            });
+        }
+
+        if (existingCustomers.length > 0) {
+            isIgnoringWarning = false;
+            // Zobrazit varovný dialog s nalezenými zákazníky
+            existingCustomersList.innerHTML = '';
+            existingCustomers.forEach(customer => {
+                const customerCard = document.createElement('div');
+                customerCard.className = 'customer-card';
+                customerCard.innerHTML = `
+                    <p><strong>Jméno:</strong> ${customer.name || ''}</p>
+                    <p><strong>Adresa:</strong> ${customer.address || ''}</p>
+                    <p><strong>Telefon:</strong> ${customer.phone || ''}</p>
+                    <p><strong>E-mail:</strong> ${customer.email || ''}</p>
+                    <p><strong>Datum:</strong> ${customer.date || ''}</p>
+                    <p><strong>Poznámka:</strong> ${customer.note || ''}</p>
+                    <div class="action-buttons">
+                        <button class="edit-btn" data-id="${customer.key}"><i class="fas fa-edit"></i> Upravit</button>
+                        <button class="delete-btn" data-id="${customer.key}"><i class="fas fa-trash-alt"></i> Smazat</button>
+                    </div>
+                `;
+                existingCustomersList.appendChild(customerCard);
+            });
+            addActionListeners();
+            warningDialog.classList.remove('hidden');
+        } else {
+            // Zobrazit, že se jedná o nového zákazníka
+            setPhoneStatus('Nový zákazník...', 'ok');
+        }
+    });
+});
 
 // Posluchač událostí pro odeslání formuláře
 customerForm.addEventListener('submit', (e) => {
@@ -241,6 +329,8 @@ showAddCustomerBtn.addEventListener('click', () => {
     showView(addCustomerView);
     customerForm.reset();
     currentCustomerId = null;
+    phoneStatus.innerHTML = ''; // Vyčistit status
+    addCustomerTitle.textContent = 'Přidat nového zákazníka'; // Reset nadpisu
     customerForm.querySelector('button[type="submit"]').textContent = 'Uložit';
 });
 showSearchCustomerBtn.addEventListener('click', () => {
@@ -270,6 +360,14 @@ dialogCancelBtn.addEventListener('click', () => {
     confirmDialog.classList.add('hidden');
     currentCustomerId = null;
 });
+
+// Posluchač pro tlačítko "Ignorovat varování"
+ignoreWarningBtn.addEventListener('click', () => {
+    warningDialog.classList.add('hidden');
+    setPhoneStatus('Takový zákazník již existuje, uložením se vytvoří další zákazník se stejným telefonním číslem.', 'warning');
+    isIgnoringWarning = true;
+});
+
 
 // Zobrazení úvodního menu při načtení stránky
 document.addEventListener('DOMContentLoaded', () => {
