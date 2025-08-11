@@ -7,6 +7,7 @@
     --success-color: #28a745;
     --danger-color: #dc3545;
     --edit-color: #ffc107;
+    --warning-color: #ffc107;
 }
 
 * {
@@ -204,6 +205,7 @@ button[type="submit"]:hover {
     position: relative;
     transition: transform 0.3s ease;
     text-align: left;
+    margin-bottom: 1rem;
 }
 
 .customer-card:hover {
@@ -219,14 +221,12 @@ button[type="submit"]:hover {
 }
 
 .customer-card .action-buttons {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
     display: flex;
     gap: 0.5rem;
+    margin-top: 1rem;
 }
 
-.delete-btn, .edit-btn {
+.delete-btn, .edit-btn, .ignore-btn {
     padding: 0.5rem 1rem;
     border-radius: 8px;
     border: none;
@@ -236,6 +236,7 @@ button[type="submit"]:hover {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: auto;
 }
 
 .delete-btn {
@@ -256,6 +257,18 @@ button[type="submit"]:hover {
 .edit-btn:hover {
     background-color: #e0a800;
     transform: scale(1.05);
+}
+
+.ignore-btn {
+    background-color: var(--warning-color);
+    color: black;
+    margin-top: 1.5rem;
+    width: 100%;
+    padding: 1rem;
+}
+
+.ignore-btn:hover {
+    background-color: #d89e00;
 }
 
 .hidden {
@@ -282,6 +295,8 @@ button[type="submit"]:hover {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     text-align: center;
     max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .dialog-content p {
@@ -293,6 +308,15 @@ button[type="submit"]:hover {
     display: flex;
     justify-content: center;
     gap: 1rem;
+}
+
+.warning-title {
+    color: var(--danger-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
 }
 
 .back-btn {
@@ -338,6 +362,24 @@ button[type="submit"]:hover {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.phone-status-text {
+    margin-top: -0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9em;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.phone-status-text.ok {
+    color: var(--success-color);
+}
+
+.phone-status-text.warning {
+    color: var(--danger-color);
 }
 
 /* Responzivní styly */
